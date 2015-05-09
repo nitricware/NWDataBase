@@ -25,6 +25,7 @@ For information about the functions of the class, please check the documentation
 * Search for rows
 * Draw an ASCII table with the database content
 * Delete a database
+
 ## Changelog
 v1.0
 - initial release
