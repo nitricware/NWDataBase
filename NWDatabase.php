@@ -16,6 +16,8 @@
 		
 	*/
 	
+	namespace NitricWare;
+	
 	class NWDatabase {
 		private $dbName;
 		private $path;
@@ -290,7 +292,7 @@
 				of the last record on success or false on failure.
 			
 			$values
-				This must ne an array and can be 1D or 2D.
+				This must be an array and can be 1D or 2D.
 				
 			$firstRun
 				Value is set by the function.
