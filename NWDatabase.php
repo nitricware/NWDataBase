@@ -18,6 +18,9 @@
 	
 	namespace NitricWare;
 	
+	// Make DOMDocument Class useable
+	use \DOMDocument as DOMDocument;
+	
 	class NWDatabase {
 		private $dbName;
 		private $path;
