@@ -1,4 +1,4 @@
-# NWDataBase 1.0
+# NWDataBase 1.0.1
 ## Introduction
 NWDataBase is an XML-based database system for small databases. It provides a light weight database solution for webspaces where no SQLite is available. The system provides simple functions, including a search function.
 ## License
@@ -30,5 +30,6 @@ For information about the functions of the class, please check the documentation
 v1.0.1
 - fixed XML layout
 - using new NWLog 1.0.1
+
 v1.0
 - initial release
