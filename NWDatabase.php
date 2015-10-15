@@ -78,7 +78,7 @@
 		
 		protected function addError($number, $message){
 			$this->errorArray[] = array($number => $message);
-			NWWriteLog("$number $message");
+			NWWriteLog("$number $message", debug_backtrace());
 			return true;
 		}
 		

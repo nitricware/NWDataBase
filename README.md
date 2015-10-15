@@ -10,7 +10,7 @@ NWDataBase requires NWFileOperations, NWLog (both available on Github) and PHP 5
 In order to use NWDataBase, you just need to include the .php-file and write the use command.
 ```php
 require "./path/to/NWDataBase.php";
-use NitricWare/NWDataBase;
+use NitricWare\NWDataBase;
 ```
 Done. No installation required.
 ## Functions
@@ -27,5 +27,8 @@ For information about the functions of the class, please check the documentation
 * Delete a database
 
 ## Changelog
+v1.0.1
+- fixed XML layout
+- using new NWLog 1.0.1
 v1.0
 - initial release
