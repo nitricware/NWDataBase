@@ -12,14 +12,11 @@
 		- NWFileOperations.NWFunction
 		- NWLog.NWFunction
 		
-		Version 1.0 rev 3
+		Version 1.0.1 (rev 4)
 		
 	*/
 	
 	namespace NitricWare;
-	
-	// Make DOMDocument Class useable
-	use \DOMDocument as DOMDocument;
 	
 	class NWDatabase {
 		private $dbName;
@@ -48,14 +45,16 @@
 			if (!$this->path = NWPathComplete($this->path)) return false;
 			if (!$fileName = NWFileExists($this->dbName,"nwdb",$this->path)){
 				if (!$this->NWDBCreate()){
-					NWWriteLog("Creation of $this->dbName failed.");
+					NWWriteLog("Creation of ".$this->dbName." failed.");
 					return false;
 				}
 			}
 			
 			$this->fileName = NWFileExists($this->dbName,"nwdb",$this->path);
 			
-			$this->dataBase = new DOMDocument();
+			$this->dataBase = new \DOMDocument();
+			$this->dataBase->preserveWhiteSpace = false;
+			$this->dataBase->formatOutput = true;
 			$this->dataBase->load($this->fileName);
 		}
 		
@@ -114,7 +113,7 @@
 			
 			// Creates a new document tree
 			
-			$dataBase = new DOMDocument("1.0", "UTF-8");
+			$dataBase = new \DOMDocument("1.0", "UTF-8");
 			$rootElement = $dataBase->createElement("Database");
 			
 			// Creates the information tree.
@@ -137,7 +136,7 @@
 			
 			$dataBase->save($this->fileName);
 			
-			$this->dataBase = new DOMDocument();
+			$this->dataBase = new \DOMDocument();
 			$this->dataBase->load($this->fileName);
 			
 			return $this->NWDBInfo();
@@ -306,7 +305,7 @@
 		
 		public function NWDBInsertRecord($values, $firstRun = true){
 			if (is_array($values[0])){
-				if (!firstRun){
+				if (!$firstRun){
 					if (DEBUG) $this->addError(23, "Array may not have more than 2 dimensions.");
 					return false;
 				}
@@ -343,12 +342,16 @@
 					} else {
 						$value = $values[$i];	
 					}
+					
+					if (is_array($value)){
+						if (DEBUG) $this->addError(9, "Value provided for ".$columns[$i]." is an array. This is illegal.");
+						return false;
+					}
+					
 					$record->appendChild($this->dataBase->createElement($columns[$i], $value));
 				}
 				
-				$records->appendChild($record);		
-				
-				$this->dataBase->formatOutput = true;
+				$records->appendChild($record);
 				$this->dataBase->save($this->fileName);
 			}
 			
