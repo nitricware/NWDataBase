@@ -12,7 +12,7 @@
 		- NWFileOperations.NWFunction
 		- NWLog.NWFunction
 		
-		Version 1.0.1 (rev 4)
+		Version 1.0.2
 		
 	*/
 	
@@ -272,7 +272,7 @@
 				failure.
 		*/
 		
-		public function NWDBGetColumns (){
+		public function NWDBGetColumns(){
 			$columns = $this->dataBase->getElementsByTagName("column");
 			
 			$returnArray = array();
@@ -392,8 +392,8 @@
 				Specifies the ID of the requested record.
 		*/
 		
-		public function NWDBGetRecord ($id){
-			$xpath = new DOMXPath($this->dataBase);
+		public function NWDBGetRecord($id){
+			$xpath = new \DOMXPath($this->dataBase);
 			
 			$query = "//Record[@id='$id']";
 			if (!$record = $xpath->query($query)){
@@ -422,7 +422,7 @@
 		*/
 		
 		public function NWDBDeleteRecord($id){
-			$xpath = new DOMXPath($this->dataBase);
+			$xpath = new \DOMXPath($this->dataBase);
 			
 			$query = "//Record[@id='$id']";
 			$search = $xpath->query($query);
@@ -459,7 +459,7 @@
 		*/
 		
 		public function NWDBUpdateRecord($id, $valuesArray){
-			$xpath = new DOMXPath($this->dataBase);
+			$xpath = new \DOMXPath($this->dataBase);
 			
 			$query = "//Record[@id='$id']";
 			if (!$record = $xpath->query($query)){
@@ -522,7 +522,7 @@
 		*/
 		
 		public function NWDBSearch($column, $value, $exact = false){
-			$xpath = new DOMXPath($this->dataBase);
+			$xpath = new \DOMXPath($this->dataBase);
 
 			if ($exact){
 				$query = "//Record[$column='$value']";
