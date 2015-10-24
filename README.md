@@ -1,4 +1,4 @@
-# NWDataBase 1.0.2
+# NWDataBase 1.1
 ## Introduction
 NWDataBase is an XML-based database system for small databases. It provides a light weight database solution for webspaces where no SQLite is available. The system provides simple functions, including a search function.
 ## License
@@ -7,7 +7,8 @@ NWDataBase was created by **Kurt Höblinger** as **NitricWare**.
 ## Requirements
 NWDataBase requires NWFileOperations, NWLog (both available on Github) and PHP 5.x.
 ## Usage
-In order to use NWDataBase, you just need to include the .php-file and write the use command.
+Use *Composer* to install NWDataBase to your project via the ```composer require nitricware/nwdatabase``` command.
+Alternatively you can also just include the NWDataBase.php-file.
 ```php
 require "./path/to/NWDataBase.php";
 use NitricWare\NWDataBase;
@@ -25,8 +26,16 @@ For information about the functions of the class, please check the documentation
 * Search for rows
 * Draw an ASCII table with the database content
 * Delete a database
+* Sort a result by a specified column ascending or descending
+* Limit a result to a specified amount and start by a specified offset if desired
 
 ## Changelog
+v1.1
+- added limit parameter to NWDBSearch and NWDBGetRecords
+- the array structure of NWDBGetRecords has changed to match the structure of NWDBSearch
+- added the possibility to sort a result
+- made NWDataBase available to composer
+
 v1.0.2
 - bugfixes
 - whitespace fixes

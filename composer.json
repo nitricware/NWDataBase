@@ -1,0 +1,25 @@
+{
+    "name": "nitricware/nwdatabase",
+    "version": "1.1",
+    "type": "library",
+    "description": "An XML driven simple database solution for projects where SQLite is not available and MySQL seems overpowered.",
+    "keywords": ["php","database","xml"],
+    "homepage": "https://github.com/nitricware/nwdatabase",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kurt Höblinger",
+            "email": "office@nitricware.com",
+            "homepage": "http://nitricware.com",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "email": "office@nitricware.com"
+    },
+    "require": {
+	    "nitricware/nwlog": ">=1.0.2",
+	    "nitricware/nwfileoperations": ">=1.0",
+        "php": ">=5.3.0"
+    }
+}

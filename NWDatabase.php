@@ -12,7 +12,7 @@
 		- NWFileOperations.NWFunction
 		- NWLog.NWFunction
 		
-		Version 1.0.2
+		Version 1.1
 		
 	*/
 	
@@ -364,9 +364,17 @@
 			NWDBGetRecords
 				Returns all records from the database on success
 				and false on failure.
+				
+			$limit
+				Limits the return array to a specific amount
+				of entries.
+				
+				false: no limit
+				
+				any int: limit
 		*/
 		
-		public function NWDBGetRecords(){
+		public function NWDBGetRecords($limit = false, $start = 0){
 			$columns = $this->NWDBGetColumns();
 			
 			$records = $this->dataBase->getElementsByTagName("Record");
@@ -374,12 +382,19 @@
 			$returnArray = array();
 			
 			foreach ($records as $record){
+				$columnArray = array();
 				foreach ($columns as $column){
 					$columnLine = $record->getElementsByTagName($column);
 					
-					@$returnArray[$record->getAttribute("id")][$column] = $columnLine->item(0)->nodeValue;
+					$columnArray[$column] = $columnLine->item(0)->nodeValue;
 				}
+				$returnArray[] = array("ID" => $record->getAttribute("id"), "DATA" => $columnArray);
 			}
+			
+			if ($limit){
+				$returnArray = array_slice($returnArray, $start, $limit);
+			}
+			
 			return $returnArray;
 		}
 		
@@ -519,9 +534,17 @@
 			
 				false: $column can contain $value and other strings.
 					Search is case insensitive.
+					
+			$limit
+				Limits the return array to a specific amount
+				of entries.
+				
+				false: no limit
+				
+				any int: limit
 		*/
 		
-		public function NWDBSearch($column, $value, $exact = false){
+		public function NWDBSearch($column, $value, $exact = false, $limit = false, $start = 0){
 			$xpath = new \DOMXPath($this->dataBase);
 
 			if ($exact){
@@ -550,8 +573,58 @@
 				if (DEBUG) $this->addError(19, "No result found.");
 				return false;
 			}
-			
+			if ($limit){
+				$returnArray = array_slice($returnArray, $start, $limit);
+			}
 			return $returnArray;
+		}
+		
+		/*
+			NWDBSortResult
+				Sorts a given result by given column either ascending
+				or descending.
+				
+			$array
+				The result obtained by either NWDBSearch()
+				or NWDBGetRecords().
+			
+			$column
+				Select the column you want for ordering.
+							
+			$order
+				Should the $array be ordered ascending or descending?
+				
+				"asc": $array is ordered ascending
+				
+				"desc": $array is ordered descending
+		*/
+		
+		public function NWDBSortResult($array = false, $column = "id", $order = "asc"){
+			if (!is_array($array)){
+				if (DEBUG) $this->addError(23, "Parameter array is not an array");
+				return false;
+			}
+			
+			if ($column == "id"){
+				foreach($array as $value){
+					$columnValues[]["ID"] = $value["ID"];
+				}
+			} else {
+				foreach($array as $key => $value){
+					$columnValues[] = $value["DATA"][$column];
+				}
+			}
+			
+			if ($order == "asc"){
+				array_multisort($columnValues, SORT_ASC, $array);
+			} elseif ($order == "desc") {
+				array_multisort($columnValues, SORT_DESC, $array);
+			} else {
+				if (DEBUG) $this->addError(22, "Unknown order parameter $order.");
+				return false;
+			}
+			
+			return $array;
 		}
 		
 		/*
