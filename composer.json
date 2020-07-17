@@ -1,6 +1,5 @@
 {
     "name": "nitricware/nwdatabase",
-    "version": "1.1",
     "type": "library",
     "description": "An XML driven simple database solution for projects where SQLite is not available and MySQL seems overpowered.",
     "keywords": ["php","database","xml"],
@@ -18,8 +17,8 @@
         "email": "office@nitricware.com"
     },
     "require": {
-	    "nitricware/nwlog": ">=1.0.2",
-	    "nitricware/nwfileoperations": ">=1.0",
+	    "nitricware/nwlog": "^1.0.2",
+	    "nitricware/nwfileoperations": "^1.0",
         "php": ">=5.3.0"
     },
     "autoload": {
