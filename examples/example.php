@@ -2,7 +2,7 @@
 	
 	use NitricWare\NWDatabase;
 	
-	require "../src/NWDatabase.php";
+	require "../vendor/autoload.php";
 	
 	// Instantiate NWDatabase object
 	$database = new NWDatabase("myDatabase");
@@ -78,4 +78,8 @@
 	echo $database->NWDBDraw();
 	
 	// Destroy/Delete the database
-	$database->NWDBDestroy();
+	try {
+		$database->NWDBDestroy();
+	} catch (Exception $e) {
+		echo "Error: $e";
+	}

@@ -19,8 +19,6 @@
 	namespace NitricWare;
 	
 	use DOMDocument;
-	use DOMNode;
-	use DOMNodeList;
 	use DOMXPath;
 	use Exception;
 	
@@ -70,10 +68,10 @@
 		 *
 		 * @param bool $deleteIfExists
 		 *
-		 * @return array
+		 * @return NWDBInfo
 		 * @throws Exception
 		 */
-		public function NWDBCreate (bool $deleteIfExists = false): array {
+		public function NWDBCreate (bool $deleteIfExists = false): NWDBInfo {
 			if (file_exists($this->fullPath)) {
 				if ($deleteIfExists) {
 					$this->NWDBDestroy();
@@ -115,18 +113,19 @@
 		/**
 		 * Returns an array containing information about the Database.
 		 *
-		 * @return array
+		 * @return NWDBInfo
 		 */
-		public function NWDBInfo (): array {
+		public function NWDBInfo (): NWDBInfo {
 			$infos = $this->dataBase->getElementsByTagName("Infos")->item(0);
-			$returnArray = array();
-			$returnArray["Name"] = $infos->getElementsByTagName("Name")->item(0)->nodeValue;
-			$returnArray["CreatedTime"] = $infos->getElementsByTagName("CreatedTime")->item(0)->nodeValue;
-			$returnArray["LastEditedTime"] = $infos->getElementsByTagName("LastEditedTime")->item(0)->nodeValue;
-			$returnArray["LastRecordID"] = $infos->getElementsByTagName("LastRecordID")->item(0)->nodeValue;
-			$returnArray["LastColumnID"] = $infos->getElementsByTagName("LastColumnID")->item(0)->nodeValue;
 			
-			return $returnArray;
+			$dbInfo = new NWDBInfo();
+			$dbInfo->name = $infos->getElementsByTagName("Name")->item(0)->nodeValue;
+			$dbInfo->createdTime = (int) $infos->getElementsByTagName("CreatedTime")->item(0)->nodeValue;
+			$dbInfo->lastEditedTime = (int) $infos->getElementsByTagName("LastEditedTime")->item(0)->nodeValue;
+			$dbInfo->lastRecordID = (int) $infos->getElementsByTagName("LastRecordID")->item(0)->nodeValue;
+			$dbInfo->lastColumnID = (int) $infos->getElementsByTagName("LastColumnID")->item(0)->nodeValue;
+			
+			return $dbInfo;
 		}
 		
 		/**
@@ -156,9 +155,10 @@
 		 * @throws Exception
 		 */
 		protected function checkColumnName (string $columnName): void {
-			$nameCheck = preg_match("/^([a-zA-Z]){1}([a-zA-Z0-9]*)$/", $columnName);
+			// $nameCheck = preg_match("/^([a-zA-Z]){1}([a-zA-Z0-9]*)$/", $columnName); is marked as "single repetition"
+			$nameCheck = preg_match("/^([a-zA-Z])([a-zA-Z0-9]*)$/", $columnName);
 			if ($nameCheck === false or $nameCheck == 0) {
-				throw new Exception("Your columnname is invalid. It must start with a letter and may only consist of letters and numbers.");
+				throw new Exception("Your column name is invalid. It must start with a letter and may only consist of letters and numbers.");
 			}
 		}
 		
@@ -180,12 +180,12 @@
 				$columns[] = strtolower($column);
 			}
 			
-			$oldColumns = $this->NWDBGetColumns(false);
+			$oldColumns = $this->NWDBGetColumns();
 			$infos = $this->NWDBInfo();
 			$records = $this->dataBase->getElementsByTagName("Record");
 			$allColumns = $this->dataBase->getElementsByTagName("Columns")->item(0);
 			
-			$newID = $infos["LastColumnID"];
+			$newID = $infos->lastColumnID;
 			
 			foreach ($columns as $columnName) {
 				if (in_array($columnName, $oldColumns)) {
@@ -221,16 +221,10 @@
 			return $return;
 		}
 		
-		/*
-			NWDBGetColumns
-				Returns alls column names on success or false on
-				failure.
-		*/
-		
 		/**
-		 * Returns alls column names on success
+		 * Returns all column names on success
 		 *
-		 * @param $idIsKey
+		 * @param bool $idIsKey
 		 *
 		 * @return array
 		 */
@@ -272,7 +266,7 @@
 					$this->NWDBInsertRecord($record);
 				}
 			} else {
-				$columns = $this->NWDBGetColumns(false);
+				$columns = $this->NWDBGetColumns();
 				$nrV = count($values);
 				$nrC = count($columns);
 				if ($nrV != $nrC) {
@@ -280,7 +274,7 @@
 				}
 				
 				$infos = $this->NWDBInfo();
-				$newID = $infos["LastRecordID"] + 1;
+				$newID = $infos->lastRecordID + 1;
 				
 				// update LastRecordID
 				
@@ -338,7 +332,7 @@
 		 *
 		 * @return array
 		 */
-		public function NWDBGetRecords ($limit = false, int $start = 0) {
+		public function NWDBGetRecords (bool|int $limit, int $start = 0): array {
 			$columns = $this->NWDBGetColumns();
 			
 			$records = $this->dataBase->getElementsByTagName("Record");
@@ -395,10 +389,10 @@
 		 *
 		 * @param int $id
 		 *
-		 * @return array
+		 * @return NWDBInfo
 		 * @throws Exception
 		 */
-		public function NWDBDeleteRecord (int $id): array {
+		public function NWDBDeleteRecord (int $id): NWDBInfo {
 			$xpath = new DOMXPath($this->dataBase);
 			
 			$query = "//Record[@id='$id']";
@@ -429,7 +423,7 @@
 		 * @return array
 		 * @throws Exception
 		 */
-		public function NWDBUpdateRecord (int $id, array $valuesArray) {
+		public function NWDBUpdateRecord (int $id, array $valuesArray): array {
 			$values = array();
 			$columns = array();
 			
@@ -488,10 +482,10 @@
 		 *                         of entries.
 		 * @param int      $start
 		 *
-		 * @return array
+		 * @return NWDBSearchResult[]
 		 * @throws Exception
 		 */
-		public function NWDBSearch (string $column, string $value, bool $exact = false, $limit = false, int $start = 0) {
+		public function NWDBSearch (string $column, string $value, bool $exact = false, bool|int $limit = false, int $start = 0): array {
 			$xpath = new DOMXPath($this->dataBase);
 			
 			if ($exact) {
@@ -513,7 +507,10 @@
 			if ($record->length > 0) {
 				$returnArray = array();
 				foreach ($record as $value) {
-					$returnArray[] = array("ID" => $value->attributes->item(0)->textContent, "DATA" => $this->NWDBGetRecord($value->getAttribute('id')));
+					$searchResult = new NWDBSearchResult();
+					$searchResult->id = $value->attributes->item(0)->textContent;
+					$searchResult->data = $this->NWDBGetRecord($value->getAttribute('id'));
+					$returnArray[] = $searchResult;
 				}
 			} else {
 				throw new Exception("No result found.");
@@ -542,7 +539,7 @@
 					$columnValues[]["ID"] = $value["ID"];
 				}
 			} else {
-				foreach ($array as $key => $value) {
+				foreach ($array as $value) {
 					$columnValues[] = $value["DATA"][$column];
 				}
 			}
@@ -583,18 +580,13 @@
 		 * @return string
 		 */
 		protected function placeholder (string $string, int $maxLength, string $chars = " "): string {
-			$whiteSpace = "";
-			
 			if (strlen($chars) > 1) {
 				$chars = substr($chars, 0, 1);
 			}
 			
 			$strLenString = strlen($string);
 			$neededWhiteSpaces = $maxLength - $strLenString;
-			for ($i = 0; $i < $neededWhiteSpaces; $i++) {
-				$whiteSpace .= $chars;
-			}
-			return $whiteSpace;
+			return str_repeat($chars, $neededWhiteSpaces);
 		}
 		
 		/**
@@ -606,10 +598,7 @@
 		 * @return string
 		 */
 		function drawLine (int $count, string $char = "#"): string {
-			$line = "";
-			for ($i = 0; $i < $count; $i++) {
-				$line .= $char;
-			}
+			$line = str_repeat($char, $count);
 			return "$line\n";
 		}
 		
@@ -622,19 +611,19 @@
 		 *
 		 * @return string
 		 */
-		function NWDBDraw (int $bound = 1) {
+		function NWDBDraw (int $bound = 1): string {
 			$header = "";
 			$headLine = "";
 			$data = "";
 			
-			$records = $this->NWDBGetRecords();
+			$records = $this->NWDBGetRecords(false);
 			$columns = $this->NWDBGetColumns();
 			$infos = $this->NWDBInfo();
 			$countColumns = count($columns);
-			if ($idLenght = strlen($infos["LastRecordID"]) == 1) {
-				$idLenght = 2;
+			if ($idLength = strlen($infos->lastRecordID) == 1) {
+				$idLength = 2;
 			}
-			$columnLengths["ID"] = $idLenght;
+			$columnLengths["ID"] = $idLength;
 			foreach ($columns as $column) {
 				$columnLengths[$column] = strlen($column);
 			}
@@ -660,16 +649,14 @@
 			// Drawing Header
 			
 			$headerLength = $tableWidth;
+			
 			foreach ($infos as $key => $info) {
 				if (strpos($key, "Time")) {
 					$info = date("d.m.y h:i", $info);
 				}
-				$headerLenghtCount = strlen("# $key: $info #");
-				if ($headerLenghtCount > $headerLength) {
-					$headerLength = $headerLenghtCount;
-				}
-				if (strpos($key, "Time")) {
-					$info = date("d.m.y h:i", $info);
+				$headerLengthCount = strlen("# $key: $info #");
+				if ($headerLengthCount > $headerLength) {
+					$headerLength = $headerLengthCount;
 				}
 				$header .= "# $key: $info" . $this->placeholder("# $key: $info#", $headerLength) . "#\n";
 			}
@@ -688,9 +675,7 @@
 			$headLine .= "\n#";
 			foreach ($columnLengths as $length) {
 				$headLine .= "-";
-				for ($i = 0; $i < $length; $i++) {
-					$headLine .= "-";
-				}
+				$headLine .= str_repeat("-",$length);
 				$headLine .= "-#";
 			}
 			$headLine .= "\n";

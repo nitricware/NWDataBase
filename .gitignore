@@ -1,2 +1,4 @@
 .idea
 examples/myDatabase.nwdb
+vendor
+composer.lock
