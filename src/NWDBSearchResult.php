@@ -4,5 +4,5 @@
 	
 	class NWDBSearchResult {
 		public int $id;
-		public array $data;
+		public NWDBRecord $data;
 	}

@@ -28,6 +28,7 @@
 		private DOMDocument $dataBase;
 		private string $fileName;
 		private string $fullPath;
+		private string $recordType;
 		
 		private string $extension = "nwdb";
 		
@@ -40,7 +41,13 @@
 		 *
 		 * @throws Exception
 		 */
-		function __construct (string $database, string $location = "./", bool $deleteIfExists = false) {
+		function __construct (string $database, string $recordType, string $location = "./", bool $deleteIfExists = false) {
+			if (!class_exists($recordType)) {
+				throw new Exception("Record type does not exist.");
+			}
+			
+			$this->recordType = $recordType;
+			
 			if (!file_exists(realpath($location))) {
 				throw new Exception("Location does not exist.");
 			}
@@ -248,6 +255,8 @@
 		 * This function creates a new record and returns the ID
 		 * of the last record on success or false on failure.
 		 *
+		 * TODO: replace $values with NWDBRecord|NWDBRecord[]
+		 *
 		 * @param array $values   This must be an array and can be 1D or 2D.
 		 * @param bool  $firstRun Value is set by the function.
 		 *
@@ -310,47 +319,30 @@
 			return $newID;
 		}
 		
-		/*
-			NWDBGetRecords
-				Returns all records from the database on success
-				and false on failure.
-				
-			$limit
-				Limits the return array to a specific amount
-				of entries.
-				
-				false: no limit
-				
-				any int: limit
-		*/
-		
 		/**
 		 * Returns all records from the database.
 		 *
 		 * @param bool|int $limit Limits the return array to a specific amount of entries.
 		 * @param int      $start
 		 *
-		 * @return array
+		 * @return NWDBRecord[]
+		 * @throws Exception
 		 */
 		public function NWDBGetRecords (bool|int $limit, int $start = 0): array {
-			$columns = $this->NWDBGetColumns();
-			
-			$records = $this->dataBase->getElementsByTagName("Record");
+			$records = $this->dataBase->getElementsByTagName("Record")->count();
+			if ($limit) {
+				$limit = $start + $limit;
+				if ($records > $limit) {
+					$limit = $records;
+				}
+			} else {
+				$limit = $records;
+			}
 			
 			$returnArray = array();
 			
-			foreach ($records as $record) {
-				$columnArray = array();
-				foreach ($columns as $column) {
-					$columnLine = $record->getElementsByTagName($column);
-					
-					$columnArray[$column] = $columnLine->item(0)->nodeValue;
-				}
-				$returnArray[] = array("ID" => $record->getAttribute("id"), "DATA" => $columnArray);
-			}
-			
-			if ($limit) {
-				$returnArray = array_slice($returnArray, $start, $limit);
+			for ($i = $start; $i < $limit; $i++) {
+				$returnArray[] = $this->NWDBGetRecord($i);
 			}
 			
 			return $returnArray;
@@ -361,12 +353,13 @@
 		 *
 		 * @param int $id
 		 *
-		 * @return array
+		 * @return NWDBRecord
 		 * @throws Exception
 		 */
-		public function NWDBGetRecord (int $id): array {
+		public function NWDBGetRecord (int $id): NWDBRecord {
 			$xpath = new DOMXPath($this->dataBase);
-			
+			// xpath begins counting at 1 while the rest begins at 0
+			$id++;
 			$query = "//Record[@id='$id']";
 			if (!$record = $xpath->query($query)) {
 				throw new Exception("Record $id not found.");
@@ -374,13 +367,14 @@
 			
 			$record = $record->item(0);
 			
-			$returnArray = array();
-			
+			$dbRecord = new ($this->recordType)();
 			foreach ($record->childNodes as $value) {
-				$returnArray[$value->localName] = $value->textContent;
+				$recordPropertyName = $value->localName;
+				$dbRecord->id = $id;
+				$dbRecord->$recordPropertyName = $value->textContent;
 			}
 			
-			return $returnArray;
+			return $dbRecord;
 		}
 		
 		/**
@@ -394,7 +388,7 @@
 		 */
 		public function NWDBDeleteRecord (int $id): NWDBInfo {
 			$xpath = new DOMXPath($this->dataBase);
-			
+			$id++;
 			$query = "//Record[@id='$id']";
 			$search = $xpath->query($query);
 			
@@ -417,43 +411,25 @@
 		 * Updates a record and returns the updated record
 		 * on success and false on failure.
 		 *
-		 * @param int   $id
-		 * @param array $valuesArray array("column1" => "Value 1", "column2" => "Value 2");
+		 * @param NWDBRecord $updatedRecord
 		 *
-		 * @return array
+		 * @return NWDBRecord
 		 * @throws Exception
 		 */
-		public function NWDBUpdateRecord (int $id, array $valuesArray): array {
-			$values = array();
-			$columns = array();
-			
+		public function NWDBUpdateRecord (NWDBRecord $updatedRecord): NWDBRecord {
 			$xpath = new DOMXPath($this->dataBase);
 			
-			$query = "//Record[@id='$id']";
+			$query = "//Record[@id='".$updatedRecord->id."']";
 			if (!$record = $xpath->query($query)) {
-				throw new Exception("Record $id not found.");
+				throw new Exception("Record ".$updatedRecord->id." not found.");
 			}
 			
 			$record = $record->item(0);
 			
-			foreach ($valuesArray as $key => $value) {
-				$columns[] = $key;
-				$values[] = $value;
-			}
-			
-			$nrV = count($values);
-			$nrC = count($columns);
-			
-			for ($i = 0; $i < $nrC; $i++) {
-				if ($i >= $nrV) {
-					$value = "";
-				} else {
-					$value = $values[$i];
-				}
-				
-				if ($value != false and $value != "false") {
-					$oldChild = $record->getElementsByTagName($columns[$i])->item(0);
-					$newChild = $this->dataBase->createElement($columns[$i], $value);
+			foreach ($updatedRecord as $column => $value) {
+				if ($column != "id") {
+					$oldChild = $record->getElementsByTagName($column)->item(0);
+					$newChild = $this->dataBase->createElement($column, $value);
 					
 					$oldChild->parentNode->replaceChild($newChild, $oldChild);
 				}
@@ -465,7 +441,7 @@
 			
 			$this->NWDBUpdateEditTime();
 			
-			return $this->NWDBGetRecord($id);
+			return $this->NWDBGetRecord($updatedRecord->id);
 		}
 		
 		/**
@@ -509,7 +485,7 @@
 				foreach ($record as $value) {
 					$searchResult = new NWDBSearchResult();
 					$searchResult->id = $value->attributes->item(0)->textContent;
-					$searchResult->data = $this->NWDBGetRecord($value->getAttribute('id'));
+					$searchResult->data = $this->NWDBGetRecord($value->getAttribute('id') - 1);
 					$returnArray[] = $searchResult;
 				}
 			} else {
@@ -610,6 +586,7 @@
 		 *                   left (any string or integer) or right (1) bound.
 		 *
 		 * @return string
+		 * @throws Exception
 		 */
 		function NWDBDraw (int $bound = 1): string {
 			$header = "";
@@ -629,9 +606,9 @@
 			}
 			
 			foreach ($records as $record) {
-				foreach ($record["DATA"] as $key => $value) {
+				foreach ($record as $key => $value) {
 					$strLen = strlen($value);
-					if ($columnLengths[$key] < $strLen) {
+					if ($key != "id" && $columnLengths[$key] < $strLen) {
 						$columnLengths[$key] = $strLen;
 					}
 				}
@@ -689,12 +666,14 @@
 				} else {
 					$data .= "# $recordID$whiteSpaceID #";
 				}
-				foreach ($record["DATA"] as $key => $value) {
-					$whiteSpace = $this->placeholder($value, $columnLengths[$key]);
-					if ($bound == 1) {
-						$data .= "$whiteSpace $value #";
-					} else {
-						$data .= " $value$whiteSpace #";
+				foreach ($record as $key => $value) {
+					if ($key != "id") {
+						$whiteSpace = $this->placeholder($value, $columnLengths[$key]);
+						if ($bound == 1) {
+							$data .= "$whiteSpace $value #";
+						} else {
+							$data .= " $value$whiteSpace #";
+						}
 					}
 				}
 				$data .= "\n";
