@@ -11,14 +11,14 @@
 	 * somewhat workaround.
 	 */
 	
-	class CityCountryRiver implements NWDBRecord {
+	class CityCountryRiver extends NWDBRecord {
 		public string $city;
 		public string $country;
 		public string $river;
 	}
 	
 	// Instantiate NWDatabase object
-	$database = new NWDatabase("myDatabase", CityCountryRiver::class);
+	$database = new NWDatabase("cityCountryRiverDatabase", CityCountryRiver::class);
 	
 	/*
 	 * Insert columns
@@ -30,32 +30,42 @@
 	}
 	
 	// Display an ASCII representation of the database
-	echo $database->NWDBDraw();
-	
-	/*
-	 * Insert a single record
-	 */
 	try {
-		$database->NWDBInsertRecord(["Linz", "Austria", "Danube"]);
+		echo $database->NWDBDraw();
 	} catch (Exception $e) {
 		echo "Error: $e";
 	}
 	
 	/*
-	 * Insert multiple records
+	 * Insert records
 	 */
 	try {
-		$database->NWDBInsertRecord([
-				["Prague", "Czechia", "Moldova"],
-				["Berlin", "Germany", "Spree"]
-			]
-		);
+		$linz = new CityCountryRiver();
+		$linz->city = "Linz";
+		$linz->country = "Austria";
+		$linz->river = "Danube";
+		
+		$prague = new CityCountryRiver();
+		$prague->city = "Prague";
+		$prague->country = "Czechia";
+		$prague->river = "Moldova";
+		
+		$berlin = new CityCountryRiver();
+		$berlin->city = "Berlin";
+		$berlin->country = "Germany";
+		$berlin->river = "Spree";
+		
+		$database->NWDBInsertRecord([$linz, $prague, $berlin]);
 	} catch (Exception $e) {
 		echo "Error: $e";
 	}
 	
 	// Display an ASCII representation of the database
-	echo $database->NWDBDraw();
+	try {
+		echo $database->NWDBDraw();
+	} catch (Exception $e) {
+		echo "Error: $e";
+	}
 	
 	/*
 	 * update a value of a record
@@ -72,14 +82,7 @@
 	// Display an ASCII representation of the database
 	echo $database->NWDBDraw();
 	
-	/*
-	 * Delete a record
-	 */
-	try {
-		$database->NWDBDeleteRecord(2);
-	} catch (Exception $e) {
-		echo "Error: $e";
-	}
+	
 	
 	/*
 	 * Search for a record
@@ -98,7 +101,7 @@
 		 */
 		
 		echo "<pre>";
-		echo "The river name is: ".$searchResult[0]->data->river."\n";
+		echo "The river name is: ".$searchResult[0]->river."\n";
 		print_r($searchResult);
 		echo "</pre>";
 	} catch (Exception $e) {
@@ -117,9 +120,43 @@
 		echo "Error: $e";
 	}
 	
+	try {
+		/** @var CityCountryRiver[] $singleRecord */
+		$manyRecords = $database->NWDBGetRecords(2,1);
+		
+		echo "<pre>";
+		print_r($manyRecords);
+		echo "</pre>";
+		
+		echo "<pre>";
+		echo "Now NWDB sorts the array based on the city column.\n";
+		echo "</pre>";
+		
+		/** @var CityCountryRiver[] $sortedRecords */
+		$sortedRecords = $database->NWDBSortResult($manyRecords, "city");
+		
+		echo "<pre>";
+		print_r($sortedRecords);
+		echo "</pre>";
+	} catch (Exception $e) {
+		echo "Error: $e";
+	}
+	
+	/*
+	 * Delete a record
+	 */
+	try {
+		$database->NWDBDeleteRecord(2);
+	} catch (Exception $e) {
+		echo "Error: $e";
+	}
 	
 	// Display an ASCII representation of the database
-	echo $database->NWDBDraw();
+	try {
+		echo $database->NWDBDraw();
+	} catch (Exception $e) {
+		echo "Error: $e";
+	}
 	
 	// Destroy/Delete the database
 	try {

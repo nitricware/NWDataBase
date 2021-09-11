@@ -2,7 +2,6 @@
 	
 	namespace NitricWare;
 	
-	/**
-	 * @property int $id
-	 */
-	interface NWDBRecord { 	}
+	class NWDBRecord {
+		public int $id;
+	}

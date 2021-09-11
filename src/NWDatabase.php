@@ -252,71 +252,56 @@
 		}
 		
 		/**
+		 * Increments the LastRecordID metadata by 1.
+		 *
+		 * @return int the updated (incremented) LastRecordID
+		 */
+		private function NWDBIncrementLastRecordID(): int {
+			$infos = $this->NWDBInfo();
+			
+			$lastID = $this->dataBase->getElementsByTagName("LastRecordID")->item(0);
+			$newID = $this->dataBase->createElement("LastRecordID", $infos->lastRecordID + 1);
+			
+			$lastID->parentNode->replaceChild($newID, $lastID);
+			
+			return $infos->lastRecordID + 1;
+		}
+		
+		/**
 		 * This function creates a new record and returns the ID
-		 * of the last record on success or false on failure.
+		 * of the last record on success.
 		 *
-		 * TODO: replace $values with NWDBRecord|NWDBRecord[]
-		 *
-		 * @param array $values   This must be an array and can be 1D or 2D.
-		 * @param bool  $firstRun Value is set by the function.
+		 * @param NWDBRecord[] $records
 		 *
 		 * @return int
 		 * @throws Exception
 		 */
-		public function NWDBInsertRecord (array $values, bool $firstRun = true): int {
-			$newID = 0;
-			
-			if (is_array($values[0])) {
-				if (!$firstRun) {
-					throw new Exception("Array may not have more than 2 dimensions.");
-				}
-				// Multi Dimensional Array Detected
-				foreach ($values as $record) {
-					$this->NWDBInsertRecord($record);
-				}
-			} else {
-				$columns = $this->NWDBGetColumns();
-				$nrV = count($values);
-				$nrC = count($columns);
-				if ($nrV != $nrC) {
-					throw new Exception("Number of values ($nrV) does not match number of columns ($nrC).");
-				}
-				
-				$infos = $this->NWDBInfo();
-				$newID = $infos->lastRecordID + 1;
-				
-				// update LastRecordID
-				
-				$lastID = $this->dataBase->getElementsByTagName("LastRecordID")->item(0);
-				$newColumnID = $this->dataBase->createElement("LastRecordID", $newID);
-				
-				$lastID->parentNode->replaceChild($newColumnID, $lastID);
-				
-				// insert Record
-				$records = $this->dataBase->getElementsByTagName("Records")->item(0);
-				$record = $this->dataBase->createElement("Record");
-				$record->setAttribute("id", $newID);
-				for ($i = 0; $i < $nrC; $i++) {
-					if ($i >= $nrV) {
-						$value = "";
-					} else {
-						$value = $values[$i];
+		public function NWDBInsertRecord (array $records): int {
+			foreach ($records as $newRecord) {
+				if (get_class($newRecord) == $this->recordType) {
+					$newRecord->id = $this->NWDBIncrementLastRecordID();
+					
+					// insert Record
+					$records = $this->dataBase->getElementsByTagName("Records")->item(0);
+					$record = $this->dataBase->createElement("Record");
+					$record->setAttribute("id", $newRecord->id);
+					
+					foreach ($newRecord as $column => $value) {
+						if ($column != "id") {
+							$record->appendChild($this->dataBase->createElement($column, $value));
+						}
 					}
 					
-					if (is_array($value)) {
-						throw new Exception("Value provided for " . $columns[$i] . " is an array. This is illegal.");
-					}
-					
-					$record->appendChild($this->dataBase->createElement($columns[$i], $value));
+					$records->appendChild($record);
+					$this->dataBase->save($this->fileName);
+				} else {
+					throw new Exception("Provided record is not of type ".$this->recordType);
 				}
-				
-				$records->appendChild($record);
-				$this->dataBase->save($this->fileName);
 			}
 			
 			$this->NWDBUpdateEditTime();
 			
-			return $newID;
+			return $this->NWDBInfo()->lastRecordID;
 		}
 		
 		/**
@@ -330,9 +315,13 @@
 		 */
 		public function NWDBGetRecords (bool|int $limit, int $start = 0): array {
 			$records = $this->dataBase->getElementsByTagName("Record")->count();
+			if ($start > $records) {
+				throw new Exception("Start position $start is too high.");
+			}
+			
 			if ($limit) {
 				$limit = $start + $limit;
-				if ($records > $limit) {
+				if ($records < $limit) {
 					$limit = $records;
 				}
 			} else {
@@ -458,7 +447,7 @@
 		 *                         of entries.
 		 * @param int      $start
 		 *
-		 * @return NWDBSearchResult[]
+		 * @return NWDBRecord[]
 		 * @throws Exception
 		 */
 		public function NWDBSearch (string $column, string $value, bool $exact = false, bool|int $limit = false, int $start = 0): array {
@@ -483,10 +472,7 @@
 			if ($record->length > 0) {
 				$returnArray = array();
 				foreach ($record as $value) {
-					$searchResult = new NWDBSearchResult();
-					$searchResult->id = $value->attributes->item(0)->textContent;
-					$searchResult->data = $this->NWDBGetRecord($value->getAttribute('id') - 1);
-					$returnArray[] = $searchResult;
+					$returnArray[] = $this->NWDBGetRecord($value->getAttribute('id') - 1);;
 				}
 			} else {
 				throw new Exception("No result found.");
@@ -501,34 +487,46 @@
 		 * Sorts a given result by given column either ascending
 		 * or descending.
 		 *
-		 * @param array  $array  The result obtained by either NWDBSearch()
-		 *                       or NWDBGetRecords().
+		 * TODO: https://stackoverflow.com/questions/4282413/sort-array-of-objects-by-object-fields
+		 *
+		 * @param NWDBRecord[]  $records
 		 * @param string $column Select the column you want for ordering.
 		 * @param string $order
 		 *
-		 * @return array
+		 * @return NWDBRecord[]
 		 * @throws Exception
 		 */
-		public function NWDBSortResult (array $array, string $column = "id", string $order = "asc"): array {
+		public function NWDBSortResult (array $records, string $column = "id", string $order = "asc"): array {
+			if (!property_exists($this->recordType, $column)) {
+				throw new Exception("Column $column does not exist.");
+			}
+			usort($records, fn($a,$b) => strcmp($a->$column, $b->$column));
+			
+			return  $records;
+			
+			/*
 			if ($column == "id") {
 				foreach ($array as $value) {
 					$columnValues[]["ID"] = $value["ID"];
 				}
 			} else {
-				foreach ($array as $value) {
-					$columnValues[] = $value["DATA"][$column];
+				foreach ($records as $record) {
+					foreach ($record as $column => $value) {
+						$columnValues[] = $record->$column;
+					}
 				}
 			}
 			
 			if ($order == "asc") {
-				array_multisort($columnValues, SORT_ASC, $array);
+				array_multisort($columnValues, SORT_ASC, $records);
 			} elseif ($order == "desc") {
-				array_multisort($columnValues, SORT_DESC, $array);
+				array_multisort($columnValues, SORT_DESC, $records);
 			} else {
 				throw new Exception("Unknown order parameter $order.");
 			}
 			
-			return $array;
+			return $records;
+			*/
 		}
 		
 		/**
