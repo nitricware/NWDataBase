@@ -1,20 +1,5 @@
 <?php
-	/*
-	
-		NitricWare presents
-		NWDatabase
-		
-		2014
-		
-		XML based Database System
-		
-		Requires
-		- NWFileOperations.NWFunction
-		- NWLog.NWFunction
-		
-		Version 1.1
-		
-	*/
+	/** @noinspection PhpPossiblePolymorphicInvocationInspection */
 	
 	namespace NitricWare;
 	
@@ -22,6 +7,20 @@
 	use DOMXPath;
 	use Exception;
 	
+	/**
+	 * NitricWare presents
+	 * NWDatabase
+	 *
+	 * 2014
+	 *
+	 * XML based Database System
+	 *
+	 * Requires
+	 * - NWFileOperations.NWFunction
+	 * - NWLog.NWFunction
+	 *
+	 * Version 3.0
+	 */
 	class NWDatabase {
 		private string $dbName;
 		private string $path;
@@ -97,8 +96,8 @@
 			$infos->appendChild($dataBase->createElement("Name", $this->dbName));
 			$infos->appendChild($dataBase->createElement("CreatedTime", time()));
 			$infos->appendChild($dataBase->createElement("LastEditedTime", time()));
-			$infos->appendChild($dataBase->createElement("LastRecordID", 0));
-			$infos->appendChild($dataBase->createElement("LastColumnID", 0));
+			$infos->appendChild($dataBase->createElement("LastRecordID", -1));
+			$infos->appendChild($dataBase->createElement("LastColumnID", -1));
 			
 			$rootElement->appendChild($infos);
 			
@@ -127,10 +126,10 @@
 			
 			$dbInfo = new NWDBInfo();
 			$dbInfo->name = $infos->getElementsByTagName("Name")->item(0)->nodeValue;
-			$dbInfo->createdTime = (int) $infos->getElementsByTagName("CreatedTime")->item(0)->nodeValue;
-			$dbInfo->lastEditedTime = (int) $infos->getElementsByTagName("LastEditedTime")->item(0)->nodeValue;
-			$dbInfo->lastRecordID = (int) $infos->getElementsByTagName("LastRecordID")->item(0)->nodeValue;
-			$dbInfo->lastColumnID = (int) $infos->getElementsByTagName("LastColumnID")->item(0)->nodeValue;
+			$dbInfo->createdTime = (int)$infos->getElementsByTagName("CreatedTime")->item(0)->nodeValue;
+			$dbInfo->lastEditedTime = (int)$infos->getElementsByTagName("LastEditedTime")->item(0)->nodeValue;
+			$dbInfo->lastRecordID = (int)$infos->getElementsByTagName("LastRecordID")->item(0)->nodeValue;
+			$dbInfo->lastColumnID = (int)$infos->getElementsByTagName("LastColumnID")->item(0)->nodeValue;
 			
 			return $dbInfo;
 		}
@@ -213,15 +212,8 @@
 				foreach ($records as $record) {
 					$record->appendChild($this->dataBase->createElement($columnName));
 				}
+				$this->NWDBIncrementLastColumnID();
 			}
-			
-			// update LastColumnID
-			
-			$infoNode = $this->dataBase->getElementsByTagName("LastColumnID")->item(0);
-			$newColumnID = $this->dataBase->createElement("LastColumnID", $newID);
-			$infoNode->parentNode->replaceChild($newColumnID, $infoNode);
-			$this->dataBase->formatOutput = true;
-			$this->dataBase->save($this->fileName);
 			
 			$this->NWDBUpdateEditTime();
 			
@@ -256,15 +248,37 @@
 		 *
 		 * @return int the updated (incremented) LastRecordID
 		 */
-		private function NWDBIncrementLastRecordID(): int {
+		private function NWDBIncrementLastRecordID (): int {
 			$infos = $this->NWDBInfo();
+			$newID = $infos->lastRecordID + 1;
 			
 			$lastID = $this->dataBase->getElementsByTagName("LastRecordID")->item(0);
-			$newID = $this->dataBase->createElement("LastRecordID", $infos->lastRecordID + 1);
+			$newRecordID = $this->dataBase->createElement("LastRecordID", $newID);
 			
-			$lastID->parentNode->replaceChild($newID, $lastID);
+			$lastID->parentNode->replaceChild($newRecordID, $lastID);
 			
-			return $infos->lastRecordID + 1;
+			$this->dataBase->formatOutput = true;
+			$this->dataBase->save($this->fileName);
+			
+			return $newID;
+		}
+		
+		/**
+		 * Increments the LastColumnID metadata by 1.
+		 *
+		 * @return void
+		 */
+		private function NWDBIncrementLastColumnID (): void {
+			$infos = $this->NWDBInfo();
+			$newID = $infos->lastColumnID + 1;
+			
+			$infoNode = $this->dataBase->getElementsByTagName("LastColumnID")->item(0);
+			$newColumnID = $this->dataBase->createElement("LastColumnID", $newID);
+			
+			$infoNode->parentNode->replaceChild($newColumnID, $infoNode);
+			
+			$this->dataBase->formatOutput = true;
+			$this->dataBase->save($this->fileName);
 		}
 		
 		/**
@@ -280,7 +294,6 @@
 			foreach ($records as $newRecord) {
 				if (get_class($newRecord) == $this->recordType) {
 					$newRecord->id = $this->NWDBIncrementLastRecordID();
-					
 					// insert Record
 					$records = $this->dataBase->getElementsByTagName("Records")->item(0);
 					$record = $this->dataBase->createElement("Record");
@@ -295,7 +308,7 @@
 					$records->appendChild($record);
 					$this->dataBase->save($this->fileName);
 				} else {
-					throw new Exception("Provided record is not of type ".$this->recordType);
+					throw new Exception("Provided record is not of type " . $this->recordType);
 				}
 			}
 			
@@ -347,8 +360,6 @@
 		 */
 		public function NWDBGetRecord (int $id): NWDBRecord {
 			$xpath = new DOMXPath($this->dataBase);
-			// xpath begins counting at 1 while the rest begins at 0
-			$id++;
 			$query = "//Record[@id='$id']";
 			if (!$record = $xpath->query($query)) {
 				throw new Exception("Record $id not found.");
@@ -377,7 +388,6 @@
 		 */
 		public function NWDBDeleteRecord (int $id): NWDBInfo {
 			$xpath = new DOMXPath($this->dataBase);
-			$id++;
 			$query = "//Record[@id='$id']";
 			$search = $xpath->query($query);
 			
@@ -408,9 +418,9 @@
 		public function NWDBUpdateRecord (NWDBRecord $updatedRecord): NWDBRecord {
 			$xpath = new DOMXPath($this->dataBase);
 			
-			$query = "//Record[@id='".$updatedRecord->id."']";
+			$query = "//Record[@id='" . $updatedRecord->id . "']";
 			if (!$record = $xpath->query($query)) {
-				throw new Exception("Record ".$updatedRecord->id." not found.");
+				throw new Exception("Record " . $updatedRecord->id . " not found.");
 			}
 			
 			$record = $record->item(0);
@@ -442,7 +452,8 @@
 		 *                         columns for $value.
 		 * @param string   $value  Specifies the string that you want to search for.
 		 * @param bool     $exact  $column can contain $value and other strings.
-		 *                         Search is case insensitive.
+		 *                         Search is case-insensitive.
+		 *                         TODO: implement ?int (Nullable type)
 		 * @param bool|int $limit  Limits the return array to a specific amount
 		 *                         of entries.
 		 * @param int      $start
@@ -472,7 +483,7 @@
 			if ($record->length > 0) {
 				$returnArray = array();
 				foreach ($record as $value) {
-					$returnArray[] = $this->NWDBGetRecord($value->getAttribute('id') - 1);;
+					$returnArray[] = $this->NWDBGetRecord($value->getAttribute('id'));
 				}
 			} else {
 				throw new Exception("No result found.");
@@ -487,22 +498,30 @@
 		 * Sorts a given result by given column either ascending
 		 * or descending.
 		 *
-		 * TODO: https://stackoverflow.com/questions/4282413/sort-array-of-objects-by-object-fields
+		 * Further Reading: https://stackoverflow.com/questions/4282413/sort-array-of-objects-by-object-fields
 		 *
-		 * @param NWDBRecord[]  $records
-		 * @param string $column Select the column you want for ordering.
-		 * @param string $order
+		 * @param NWDBRecord[] $records
+		 * @param string       $column Select the column you want for ordering.
+		 *                             TODO: PHP 8.1 ENUMs
+		 * @param string       $order
 		 *
 		 * @return NWDBRecord[]
 		 * @throws Exception
 		 */
-		public function NWDBSortResult (array $records, string $column = "id", string $order = "asc"): array {
+		public function NWDBSortResult (array $records, string $column = "id", string $order = NWDBSortOrder::ASC): array {
 			if (!property_exists($this->recordType, $column)) {
 				throw new Exception("Column $column does not exist.");
 			}
-			usort($records, fn($a,$b) => strcmp($a->$column, $b->$column));
 			
-			return  $records;
+			if ($order == NWDBSortOrder::ASC) {
+				usort($records, fn($a, $b) => strtolower($a->$column) > strtolower($b->$column) ? 1 : -1
+				);
+			} elseif ($order == NWDBSortOrder::DESC) {
+				usort($records, fn($a, $b) => strtolower($a->$column) < strtolower($b->$column) ? 1 : -1
+				);
+			}
+			
+			return $records;
 			
 			/*
 			if ($column == "id") {
@@ -595,9 +614,11 @@
 			$columns = $this->NWDBGetColumns();
 			$infos = $this->NWDBInfo();
 			$countColumns = count($columns);
+			
 			if ($idLength = strlen($infos->lastRecordID) == 1) {
 				$idLength = 2;
 			}
+			
 			$columnLengths["ID"] = $idLength;
 			foreach ($columns as $column) {
 				$columnLengths[$column] = strlen($column);
@@ -650,7 +671,7 @@
 			$headLine .= "\n#";
 			foreach ($columnLengths as $length) {
 				$headLine .= "-";
-				$headLine .= str_repeat("-",$length);
+				$headLine .= str_repeat("-", $length);
 				$headLine .= "-#";
 			}
 			$headLine .= "\n";

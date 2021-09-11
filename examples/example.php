@@ -2,6 +2,7 @@
 	
 	use NitricWare\NWDatabase;
 	use NitricWare\NWDBRecord;
+	use NitricWare\NWDBSortOrder;
 	
 	require "../vendor/autoload.php";
 	
@@ -81,8 +82,6 @@
 	
 	// Display an ASCII representation of the database
 	echo $database->NWDBDraw();
-	
-	
 	
 	/*
 	 * Search for a record

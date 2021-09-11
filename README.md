@@ -1,23 +1,26 @@
 # NWDataBase
 ## Introduction
-NWDataBase is an XML-based database system for small databases. It provides a light weight database solution for webspaces where no SQLite is available. The system provides simple functions, including a search function.
+NWDataBase is an XML-based database system for small databases. It provides a lightweight database solution for webspaces where no SQLite is available. The system provides simple functions, including a search function.
 
 ## License
 The NWDataBase system is distributed under the **MIT License** which allows you to use it privately and commercially, to distribute, modify and sublicense it. You may not hold me liable and must include my name in the credits of your work.
 
-NWDataBase was created by **Kurt Höblinger** as **NitricWare**.
+NWDataBase was created by **Kurt Höblinger** aka **NitricWare**.
 
 ## Dependencies
-Unlike version 1.x, NWDatabase 2.x does not require any additional packages. PHP Extension ```ext-dom``` must be installed however.
+Unlike version 1.x, NWDatabase 2.x and 3.x does not require any additional packages. PHP Extension ```ext-dom``` must be installed, however.
 
 ## Usage
 Use *Composer* to install NWDataBase to your project via the ```composer require nitricware/nwdatabase``` command or your ```composer.json```.
 
-Alternatively you can also just include the NWDataBase.php-file.
+Alternatively you can also just include all the files from the `src/` directory.
 
 ```php
-require "./path/to/NWDataBase.php";
-use NitricWare\NWDataBase;
+require("NWDatabase.php");
+require("NWDBRecord.php");
+
+use NitricWare\NWDatabase;
+use NitricWare\NWDBRecord;
 ```
 
 ## Functions
@@ -37,6 +40,10 @@ For information about the functions of the class, please check the documentation
 * Limit a result to a specified amount and start by a specified offset if desired
 
 ## Changelog
+v3.0
+- PHP 8.0 support
+- makes better use of classes and types
+
 v2.0
 - docker support
 - examples added
